@@ -18,7 +18,7 @@ from pipeline import StableDiffusionImageVariationPipeline
 def shared_args() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument("-i", "--input-image", type=str, required=True, help="Initial image as input to the first variant generation.")
+    parser.add_argument("-i", "--input-image", type=str, default=None, help="Initial image as input to the first variant generation.")
     parser.add_argument("--overwrite", action="store_true",
                         help="Whether to overwrite existing files in output directory. If not set (default), "
                              "generation will continue from the last image, extending the animation.")
@@ -30,8 +30,8 @@ def shared_args() -> argparse.ArgumentParser:
     parser.add_argument("--bad-text", type=str,
                         default="simple texture|abstract image|repeating pattern|abstract shapes|cartoon|human face|oversaturated|blurry photograph|smooth low contrast",
                         help="List of text prompts to move AWAY from with CLIP guidance. Separated by '|' character.")
-    parser.add_argument("--clip-positive-scale", type=float, default=30, help="CLIP guidance scale (for 'good' text).")
-    parser.add_argument("--clip-negative-scale", type=float, default=30, help="CLIP guidance scale (for 'bad' text).")
+    parser.add_argument("-cp", "--clip-positive-scale", type=float, default=30, help="CLIP guidance scale (for 'good' text).")
+    parser.add_argument("-cn", "--clip-negative-scale", type=float, default=30, help="CLIP guidance scale (for 'bad' text).")
     parser.add_argument("--opt-repeats", type=int, default=10,
                         help="Number of steps to optimise image latent with CLIP guidance for.")
     return parser
@@ -54,6 +54,7 @@ def get_ctr(args):
 def get_initial_image(args) -> Image.Image:
     ctr = get_ctr(args)
     if ctr == 0:
+        assert args.input_image is not None, f"Must specify `--input-image` if starting a new animation."
         assert os.path.isfile(args.input_image), f"Image at '{args.input_image}' not found."
         image = Image.open(args.input_image)
     else:
