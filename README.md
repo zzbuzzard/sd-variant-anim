@@ -1,2 +1,102 @@
-# SD_Variant_Anim
-Create animations where each frame is an image variant of the one before.
+# SD Variant Animation Generator
+Create animations where each frame is a variant of the one before!
+<div style="text-align:center">
+    <img src="assets/big_example.gif" width=200>
+</div>
+
+<details>
+<summary>How it works</summary>
+Justin Pinkey finetuned Stable Diffusion v1.4 on CLIP image embeddings, rather than
+text embeddings, to create an image variant generating model.
+The model is on HuggingFace [here](https://huggingface.co/lambdalabs/sd-image-variations-diffusers).
+
+You can _almost_ create an interesting animation by repeatedly generating image variants of the previous
+image (see 'output without CLIP guidance' below). So this repo adds in a guidance step between
+generations, where the image embedding is shifted slightly to increase the similarity to several 'positive' prompts,
+and likewise reduce its similarity to negative prompts.
+</details>
+
+## Setup
+```
+git clone https://github.com/zzbuzzard/SD_Variant_Anim
+cd SD_Variant_Anim
+pip install -r requirements.txt
+```
+You may want to use a virtual environment, and install `torch` and `torchvision` as 
+instructed on the PyTorch website.
+
+## Usage
+### Automatic Generation
+To generate a variant animation from a given start image, use this command:
+```
+python generate.py -i examples/1.png -o out/0 -n 20 -s 20
+```
+where
+ - `-i` specifies input image path (a few examples provided, thanks to Pixabay)
+ - `-o` specifies output directory
+ - `-s` specifies number of steps for the diffusion process (DPM++ scheduler is used so 20 is ok)
+ - `-n` is the number of images to generate
+ - See `--help` for many other options.
+
+Note that this uses CLIP guidance by default, with generic default positive and
+negative prompts (e.g. move away from 'simple texture' and towards 'high quality').
+
+
+<details> <summary>Output of this command</summary>
+<div style="text-align:center">
+    <img src="assets/guidance.gif" width="30%">
+</div>
+</details>
+
+<details> <summary>Output without CLIP guidance</summary>
+CLIP guidance may be disabled by setting `--opt-repeats` to 0, or setting both `--clip-positive-scale` and `--clip-negative-scale` to 0.
+However, for some reason, the image variant model seems to consistently drop information from one image to the next
+without guidance - the images get increasingly simple, until you end up stuck in 'abstract texture' land.
+
+Here is the same animation as above but without CLIP guidance:
+
+```
+python generate.py -i examples/1.png -o out/no_guidance -n 20 --opt-repeats 0
+```
+
+<div style="text-align:center">
+    <img src="assets/no_guidance.gif" width="30%">
+</div>
+
+</details>
+
+
+### Manual Choice UI
+If you'd rather choose each variant
+
+The UI lets you create an animation by manually selecting each new variant from a few options.
+This gives way more control and lets you avoid the various pitfalls of automatic generation (getting stuck in loops, etc).
+
+```
+python generate_choose.py -i examples/1.png -o selected/test --batch-size 3 --speculative
+```
+here,
+ - `--batch-size` controls how many images are generated simultaneously, and so also controls how many images you get to pick between.
+ - `--speculative` enables 'speculative generation' mode, where the next results will start being computed before you've
+chosen which image you want.
+ - See `--help` for many other options (most are the shared with `generate.py`).
+
+This will open a Tkinter window which will allow you to pick from several variants for each frame
+(this is how I made the animation at the top of the repo). Keep an eye on the console for details.
+
+
+### Create Video File
+```
+python create_video.py -d [directory] -f [fps value]
+```
+(or use `ffmpeg` for finer control)
+
+
+### General Tips
+ - The guidance scale (larger `--opt-repeats` or `-cn` or `-cp`) seems to be proportional to how 'busy' the images are.
+A low scale eventually leads to simple abstract images, while a high scale leads to overly complicated images.
+ - You can fiddle with the text prompts being moved away from/towards, but unfortunately it's quite fiddly. It took
+a while to find the current default set of prompts which produced good results, so start from those.
+ - Reducing number of steps to 10 produces ok results (`-s 10`), I used this for the example at the top.
+
+leads to more 'noisy' images, while a lower scale risks falling into 'abstract texture land'.

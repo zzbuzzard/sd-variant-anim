@@ -23,7 +23,7 @@ def shared_args() -> argparse.ArgumentParser:
                         help="Whether to overwrite existing files in output directory. If not set (default), "
                              "generation will continue from the last image, extending the animation.")
     parser.add_argument("-gs", "--guidance-scale", type=float, default=4, help="Classifier-free guidance scale.")
-    parser.add_argument("-s", "--inference-steps", type=int, default=10, help="Number of inference steps (DPM++ scheduler)")
+    parser.add_argument("-s", "--inference-steps", type=int, default=20, help="Number of inference steps (DPM++ scheduler)")
     parser.add_argument("--good-text", type=str,
                         default="realistic HD photograph|professional photograph|3D realistic materials|complex image|intricate detailed",
                         help="List of text prompts to move TOWARDS with CLIP guidance. Separated by '|' character.")
@@ -70,9 +70,9 @@ def make_video_ffmpeg(path, fps, gif=False, out_path=None):
         ext = "gif" if gif else "mp4"
         out_path = os.path.join(path, f"vid.{ext}")
     if gif:
-        os.system(f"ffmpeg -r {fps} -i {path}/%06d.jpg {out_path}")
+        os.system(f"ffmpeg -r {fps} -i {path}/%07d.jpg {out_path}")
     else:
-        os.system(f"ffmpeg -r {fps} -i {path}/%06d.jpg -vcodec libx264 -y {out_path} -qp 0")
+        os.system(f"ffmpeg -r {fps} -i {path}/%07d.jpg -vcodec libx264 -y {out_path} -qp 0")
 
 
 # Uses PyAV and writes as MP4

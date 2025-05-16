@@ -29,3 +29,7 @@ if __name__ == "__main__":
 
     writer.close()
     print("Completed. Saved to", args.out)
+
+    c = input("Make GIF?")
+    if c.upper() in ["Y", "YES"]:
+        util.make_video_ffmpeg(args.directory, args.fps, gif=True, out_path=join(args.directory, "out.gif"))
