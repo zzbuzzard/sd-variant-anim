@@ -21,8 +21,8 @@ and likewise reduce its similarity to negative prompts.
 
 ## Setup
 ```
-git clone https://github.com/zzbuzzard/SD_Variant_Anim
-cd SD_Variant_Anim
+git clone https://github.com/zzbuzzard/sd-variant-anim
+cd sd-variant-anim
 pip install -r requirements.txt
 ```
 You may want to use a virtual environment, and install `torch` and `torchvision` as 
