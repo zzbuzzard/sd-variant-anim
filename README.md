@@ -71,7 +71,7 @@ python generate.py -i examples/1.png -o out/no_guidance -n 20 --opt-repeats 0
 
 ## Manual Choice UI
 <p align="center">
-    <img src="assets/ui_example.png" width="40%">
+    <img src="assets/ui_example.png" width="50%">
 </p>
 
 If you'd rather choose each variant
