@@ -7,8 +7,8 @@ Create animations where each frame is a variant of the one before!
 <details>
 <summary>How it works</summary>
 
-This project is inspired by the image variation model [here](https://huggingface.co/lambdalabs/sd-image-variations-diffusers)
-(credit to Justin Pinkey). The model is Stable Diffusion v1.4, finetuned to
+This project is based on the image variation model [here](https://huggingface.co/lambdalabs/sd-image-variations-diffusers)
+(credit to Justin Pinkney). The model is Stable Diffusion v1.4, finetuned to
 condition solely on CLIP image embeddings, rather than text embeddings.
 This allows it to be used as an image variation generating model.
 
