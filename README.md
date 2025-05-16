@@ -1,8 +1,13 @@
 # Stable Diffusion Variant Animation Generator
 Create animations where each frame is a variant of the one before!
-<p align="center">
-    <img src="assets/big_example.gif" width=200>
-</p>
+
+<div align="center">
+
+| ![](assets/lerp_example.gif) | ![](assets/big_example.gif) |
+|:----------------------------:|:---------------------------:|
+|     Example with lerping     |   Example without lerping   |
+
+</div>
 
 <details>
 <summary>How it works</summary>
@@ -17,6 +22,11 @@ image (see 'output without CLIP guidance' below). To avoid this issue,
 I add a CLIP guidance step between generations, where the image embedding
 is shifted slightly to increase the similarity to several 'positive' prompts,
 and likewise reduce its similarity to negative prompts.
+
+Lerping the image embedding and noise between frames for a smoother animation is
+also supported. It is also possible to slow the rate of change of the noise to
+improve smoothness, by setting each new noise based on the previous (rather than
+independently sampling).
 </details>
 
 ## Setup
@@ -30,7 +40,7 @@ instructed on the PyTorch website.
 
 The first time you run the code, it will download the image variant HF model (if you don't have it downloaded already).
 
-## Automatic Generation
+## Generation without Lerping
 To generate a variant animation from a given start image, use this command:
 ```
 python generate.py -i examples/1.png -o out/0 -n 20 -s 20
@@ -68,13 +78,27 @@ python generate.py -i examples/1.png -o out/no_guidance -n 20 --opt-repeats 0
 
 </details>
 
+## Generation with Lerping
+Lerp mode adds intermediate frames between the variations to produce a smoother
+animation. Use `generate_lerp.py`, which is similar to `generate.py`. Example:
+```
+python generate_lerp.py -i examples/1.png -o out/lerp -n 10 -s 20 -b 2 -f 10 --intermediate 4 --noise-shift-prop 0.35
+```
+where
+ - `-f` gives the frame rate (FPS)
+ - `-b` gives the batch size
+ - `--intermediate` specifies how many intermediate frames to generate for each variant
+ - `--noise-shift-prop` specifies how slowly the init noise should change (1 = independent for each variant, 0 = same noise for all variants)
+Output:
+<p align="center">
+    <img src="assets/lerp.gif" width=200>
+</p>
+
 
 ## Manual Choice UI
 <p align="center">
     <img src="assets/ui_example.png" width="50%">
 </p>
-
-If you'd rather choose each variant
 
 The UI lets you create an animation by manually selecting each new variant from a few options.
 This gives way more control and lets you avoid the various pitfalls of automatic generation (getting stuck in loops, etc).
@@ -105,4 +129,4 @@ A low scale eventually leads to simple abstract images, while a high scale leads
  - You can fiddle with the text prompts being moved away from/towards, but be warned: it's quite fiddly, and
 any changes you make will make a big difference (e.g. if you put 'creature' in the positive prompts, creatures will be
 everywhere!)
- - Reducing number of steps to 10 produces ok results (`-s 10`), I used this for the example at the top.
+ - Reducing number of steps to 10 produces ok results (`-s 10`), I used this for the examples at the top.

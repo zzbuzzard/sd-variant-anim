@@ -19,7 +19,8 @@ class GenerationManager(threading.Thread):
         self.cancel_except = None
 
         self.processor = VariantUtil(args.good_text, args.bad_text, args.clip_positive_scale, args.clip_negative_scale,
-                                     args.opt_repeats, args.guidance_scale, args.inference_steps)
+                                     args.opt_repeats, args.guidance_scale, args.inference_steps, height=args.height,
+                                     width=args.width)
 
         self.start()
 

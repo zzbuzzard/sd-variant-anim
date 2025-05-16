@@ -34,6 +34,8 @@ def shared_args() -> argparse.ArgumentParser:
     parser.add_argument("-cn", "--clip-negative-scale", type=float, default=30, help="CLIP guidance scale (for 'bad' text).")
     parser.add_argument("--opt-repeats", type=int, default=10,
                         help="Number of steps to optimise image latent with CLIP guidance for.")
+    parser.add_argument("--width", type=int, default=512, help="Image width.")
+    parser.add_argument("--height", type=int, default=512, help="Image height.")
     return parser
 
 
@@ -61,7 +63,7 @@ def get_initial_image(args) -> Image.Image:
         # Load last image in directory to continue from
         image = Image.open(output_path(args.out, ctr - 1))
 
-    return image.convert("RGB").resize((512, 512))
+    return image.convert("RGB").resize((args.width, args.height))
 
 
 # Path w files in format 000000.png 000001.png ...
@@ -154,8 +156,12 @@ tform = transforms.Compose([
 class VariantUtil:
     def __init__(self, good_text: List[str], bad_text: List[str], clip_pos_mul: float, clip_neg_mul: float,
                  step_repeats: int, guidance_scale: float, num_inference_steps: int = 10, device="cuda:0",
-                 dtype=torch.float16):
+                 dtype=torch.float16, height: int = 512, width: int = 512):
         self.sd_pipe, self.clip, self.clip_preprocess = load_model(device, dtype)
+
+        self.height = height
+        self.width = width
+        self.latent_shape = (1, 4, self.height//8, self.width//8)
 
         self.good_text = good_text
         self.bad_text = bad_text
@@ -211,17 +217,82 @@ class VariantUtil:
         print("CLIP guidance shift magnitude:", torch.linalg.norm(image_emb - start_emb).item())
         return image_emb
 
-    def variants(self, image: Image.Image, count: int = 1, callback=None):
+    def get_image_emb(self, image: Image.Image):
         preprocessed = tform(image).to("cuda").unsqueeze(0)
         image_emb = self.sd_pipe.encode_image(preprocessed)
         image_emb = self.shift_emb(image_emb)
+        return image_emb
+
+    def variants(self, image: Image.Image, count: int = 1, callback=None, noise=None):
+        image_emb = self.get_image_emb(image)
+
+        kwargs = {}
+        if noise is not None:
+            kwargs["latents"] = noise
 
         images = self.sd_pipe(
             image_embeddings=image_emb,
             guidance_scale=self.guidance_scale,
             num_inference_steps=self.num_inference_steps,
             num_images_per_prompt=count,
-            callback=callback
+            callback=callback,
+            height=self.height,
+            width=self.width,
+            **kwargs
         )["images"]
 
         return images
+
+    def variant_lerp(self, image_emb: torch.Tensor, noise: torch.Tensor, image: Image.Image, total_frame_count: int,
+                     batch_size: int, noise_shift_factor: float = 1):
+        """
+        Input: an image and the image embedding + noise used to generate it
+        Output: a new (variant) image, and `total_frame_count`-1 intermediate frames smoothly transitioning to it.
+        (also returns the new image_emb and new image_noise)
+        """
+        preprocessed = tform(image).to("cuda").unsqueeze(0)
+        goal_image_emb = self.sd_pipe.encode_image(preprocessed)
+        goal_image_emb = self.shift_emb(goal_image_emb)
+
+        device = image_emb.device
+        dtype = image_emb.dtype
+
+        ts = torch.arange(1, total_frame_count+1, dtype=dtype, device=device) / total_frame_count
+
+        # Interpolate image embs
+        image_embs = image_emb + (goal_image_emb - image_emb) * ts.unsqueeze(-1)
+
+        # Don't interpolate noise all the way, only go [noise_shift_factor] of the way there
+        ts = ts * noise_shift_factor
+
+        # Interpolate noise -- but renormalise to ensure Gaussian distribution at intermediate steps
+        # X, Y ~ N(0, 1)
+        # aX + (1-a)Y ~ N(0, a^2 + (1-a)^2)
+        norm_factor = torch.sqrt(ts**2 + (1 - ts)**2)
+
+        # p = 0.2
+        # new_noise = (p * torch.randn_like(noise) + (1 - p) * noise) / (p**2 + (1-p)**2)**0.5
+        new_noise = torch.randn_like(noise)
+
+        noises = noise + (new_noise - noise) * ts[:, None, None, None]
+        noises = noises / norm_factor[:, None, None, None]
+
+        # from whatis import whatis as wi
+        # wi(noises)
+        # wi(new_noise)
+
+        all_images = []
+        for s in range(0, total_frame_count, batch_size):
+            e = min(s + batch_size, total_frame_count)
+            images = self.sd_pipe(
+                image_embeddings=image_embs[s:e],
+                latents=noises[s:e],
+                guidance_scale=self.guidance_scale,
+                num_inference_steps=self.num_inference_steps,
+                height=self.height,
+                width=self.width
+            )["images"]
+
+            all_images += images
+
+        return all_images, goal_image_emb, noises[-1:]

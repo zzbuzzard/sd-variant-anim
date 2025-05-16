@@ -18,7 +18,8 @@ if __name__ == "__main__":
     assert os.path.isdir(args.directory), f"Could not find directory '{args.directory}'"
     assert os.path.isfile(util.output_path(args.directory, 0)), f"Could not find image 0000000.jpg in directory '{args.directory}'"
 
-    writer = util.AvVideoWriter(512, 512, args.out, args.fps)
+    ex = Image.open(util.output_path(args.directory, 0))
+    writer = util.AvVideoWriter(ex.height, ex.width, args.out, args.fps)
 
     print("Beginning...")
     ctr = 0

@@ -20,7 +20,8 @@ if __name__ == "__main__":
     ctr = util.get_ctr(args)
 
     processor = VariantUtil(args.good_text, args.bad_text, args.clip_positive_scale, args.clip_negative_scale,
-                            args.opt_repeats, args.guidance_scale, args.inference_steps)
+                            args.opt_repeats, args.guidance_scale, args.inference_steps, height=args.height,
+                            width=args.width)
 
     for i in range(args.num_images):
         print(f"Generating image {i+1} / {args.num_images}")
