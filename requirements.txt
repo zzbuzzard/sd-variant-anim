@@ -5,7 +5,7 @@ Pillow>=10.1.0
 whatis
 typing
 diffusers>=0.30.3
-av>=10.0.0
+av==10.0.0
 argparse>=1.4.0
 packaging
 future
